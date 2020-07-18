@@ -48,25 +48,33 @@ fun <T, F> lz(initializer: ()->Parser<T, F>) = LazyParser(initializer)
 fun <T, F> Parser<T, F>.asNonCapture() = NonCapturingParser(this)
 fun <T, F> Parser<T, F>.capture() = WrappedParser(this)
 
-infix fun <Ta, Tb, F> Parser<Ta, F>.ignoreFirst(other: Parser<Tb, F>): Parser<Tb, F>{
+infix fun <T, F> Parser<*, F>.ignoreFirst(other: Parser<T, F>): Parser<T, F>{
     val self = this
-    return biParserBuilder<Ta, F, Tb, F>{
-        a(self) .. b(other)
-    }.trans({flags -> flags to flags}) {results, _ -> results.asCompound().valueAt(1).bValue}
+    return object: Parser<T, F>{
+        override fun parse(string: String, pos: Int, flags: F): Pair<Result<T>, Int>? {
+            val (_, end) = self.parse(string, pos, flags) ?: return null
+            return other.parse(string, end, flags)
+        }
+    }
 }
 
-infix fun <Ta, Tb, F> Parser<Ta, F>.ignoreNext(other: Parser<Tb, F>): Parser<Ta, F>{
+infix fun <T, F> Parser<T, F>.ignoreNext(other: Parser<*, F>): Parser<T, F>{
     val self = this
-    return biParserBuilder<Ta, F, Tb, F>{
-        a(self) .. b(other)
-    }.trans({flags -> flags to flags}) {results, _ -> results.asCompound().valueAt(0).aValue}
+    return object: Parser<T, F>{
+        override fun parse(string: String, pos: Int, flags: F): Pair<Result<T>, Int>? {
+            val (result, end) = self.parse(string, pos, flags) ?: return null
+            return other.parse(string, end, flags)?.second?.let{ result to it }
+        }
+    }
 }
-
 
 fun <T, F> Parser<T, F>.attachError(exceptionGenerator: (F, Int)->Exception) = FailProofParser(this, exceptionGenerator)
 fun <T, F> Parser<T, F>.attachError(messageGenerator: (F)->String) = FailProofParser(this, messageGenerator)
 fun <T, F> Parser<T, F>.attachError(message: String) = FailProofParser(this, message)
 
+
+fun <T, F> Parser<T, F>.assert(checker: (Result<T>, F)->String?) = VerifyingParser(this, checker)
+fun <T, F> Parser<T, F>.assert(checker: (Result<T>)->String?) = VerifyingParser(this){results, _ -> checker(results)}
 
 
 fun <Ti, Fi, To, Fo> Parser<Ti, Fi>.trans(flagsTransform: (Fo)->Fi, resultTransform: (Result<Ti>, Fo)->Result<To>)
@@ -87,6 +95,8 @@ infix fun <T, F> Parser<T, F>.transResultString(handler: (Result<T>, F)-> String
 infix fun <T, F> Parser<T, F>.fixedResult(handler: (F)->Result<T>) = FixedParser(this, handler)
 infix fun <T, F> Parser<T, F>.fixedResultValue(handler: (F)->T)
         = FixedParser(this){flags -> ValueResult(handler(flags))}
+infix fun <T, F> Parser<T, F>.fixedResultValue(value: T)
+        = FixedParser(this){ValueResult(value)}
 infix fun <T, F> Parser<T, F>.fixedResultChar(handler: (F)->Char)
         = FixedParser(this){flags -> CharResult<T>(handler(flags))}
 infix fun <T, F> Parser<T, F>.fixedResultString(handler: (F)->String)

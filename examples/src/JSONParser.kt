@@ -122,15 +122,30 @@ class JSONParser{
         }
     }
 
-    private val kvPairParser: Parser<Pair<String, Any?>, Unit>
-    init{
-        kvPairParser = biParserBuilder<String, Unit, Any?, Unit> {
-            lz{ a(stringParser) .. wSpace .. exact(':') .. wSpace .. b(valueParser)}
-        }.transValue({Unit to Unit}){results, _ ->
-            results as CompoundResult
-            results.valueAt(0).aValue.asValue() to results.valueAt(4).bValue.asValue()
+    private val kvPairParser = object: ValueParser<Pair<String, Any?>, Unit>{
+        override fun internalParse(string: String, pos: Int, flags: Unit): Pair<Pair<String, Any?>, Int>? {
+            val (key, end1) = stringParser.parse(string, pos, flags) ?: return null
+            var index = end1
+            while (index < string.length && string[index].isWhitespace()) index++
+
+            if (index == string.length || string[index] != ':') exception(index, "expected ':'")
+            index++
+
+            while (index < string.length && string[index].isWhitespace()) index++
+
+            val (value, end2) = valueParser.parse(string, index, flags) ?: exception(index, "expected value")
+
+            return Pair(key.asValue(), value.asValue()) to end2
         }
     }
+//    init{
+//        kvPairParser = biParserBuilder<String, Unit, Any?, Unit> {
+//            lz{ a(stringParser) .. wSpace .. exact(':') .. wSpace .. b(valueParser)}
+//        }.transValue({Unit to Unit}){results, _ ->
+//            results as CompoundResult
+//            results.valueAt(0).aValue.asValue() to results.valueAt(4).bValue.asValue()
+//        }
+//    }
 
     private val objectParser: Parser<Map<String, Any?>, Unit>
     init{

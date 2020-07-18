@@ -4,13 +4,17 @@ interface Result<out T>{
     fun asValue() = (this as ValueResult).value
     fun asChar() = (this as CharResult).char
     fun asString() = (this as StringResult).string
+    fun asInteger() = (this as IntegerResult).long
+
     fun asCompound() = this as CompoundResult
+
 }
 
 data class ValueResult<out T>(val value: T): Result<T>
 
 data class CharResult<out T>(val char: Char): Result<T>
 data class StringResult<out T>(val string: String): Result<T>
+data class IntegerResult<out T>(val long: Long): Result<T>
 
 data class CompoundResult<out T>(val subResults: List<Result<T>>): Result<T>, Iterable<Result<T>>{
     constructor(vararg subs: Result<T>): this(subs.toList())
@@ -26,6 +30,7 @@ data class CompoundResult<out T>(val subResults: List<Result<T>>): Result<T>, It
     fun valueAt(index: Int) = get(index).asValue()
     fun charAt(index: Int) = get(index).asChar()
     fun stringAt(index: Int) = get(index).asString()
+    fun integerAt(index: Int) = get(index).asInteger()
     fun compoundAt(index: Int) = get(index).asCompound()
 }
 
@@ -77,6 +82,13 @@ class FailProofParser<T, F>(val subParser: Parser<T, F>, val exceptionGenerator:
 
     override fun parse(string: String, pos: Int, flags: F): Pair<Result<T>, Int>? {
         return subParser.parse(string, pos, flags) ?: throw exceptionGenerator(flags, pos)
+    }
+}
+class VerifyingParser<T, F>(val subParser: Parser<T, F>, val checker: (Result<T>, F)->String?): Parser<T, F>{
+    override fun parse(string: String, pos: Int, flags: F): Pair<Result<T>, Int>? {
+        val (result, pos) = subParser.parse(string, pos, flags) ?: return null
+        checker(result, flags)?.also{ exception(pos, it)}
+        return result to pos
     }
 }
 
