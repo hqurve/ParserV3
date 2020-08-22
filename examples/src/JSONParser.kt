@@ -158,7 +158,7 @@ class JSONParser{
                 val trailingResult = results.compoundAt(2).map{it.asCompound().valueAt(2)}
                 (listOf(primary) + trailingResult).toMap()
             },
-            builder{empty() fixedResultValue { emptyMap()} }
+            builder{empty() fixedResultValue { emptyMap<String, Any?>()} }
         ) ignoreNext Assist.exact('}').attachError("Object missing end brace")
     }
 
@@ -173,7 +173,7 @@ class JSONParser{
                 val trailingResult = results.compoundAt(2).map{it.asCompound().valueAt(2)}
                 listOf(primary) + trailingResult
             },
-            builder{empty() fixedResultValue { emptyList() } }
+            builder{empty() fixedResultValue { emptyList<Any?>() } }
         ) ignoreNext Assist.exact(']').attachError("Array missing end brace")
     }
 

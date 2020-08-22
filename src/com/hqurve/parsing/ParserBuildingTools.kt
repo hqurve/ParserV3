@@ -92,14 +92,14 @@ infix fun <T, F> Parser<T, F>.transResultChar(handler: (Result<T>, F)-> Char)
 infix fun <T, F> Parser<T, F>.transResultString(handler: (Result<T>, F)-> String)
         = ResultTransformParser(this){ results, flags -> StringResult<T>(handler(results, flags)) }
 
-infix fun <T, F> Parser<T, F>.fixedResult(handler: (F)->Result<T>) = FixedParser(this, handler)
-infix fun <T, F> Parser<T, F>.fixedResultValue(handler: (F)->T)
+infix fun <T, F> Parser<*, F>.fixedResult(handler: (F)->Result<T>) = FixedParser(this, handler)
+infix fun <T, F> Parser<*, F>.fixedResultValue(handler: (F)->T)
         = FixedParser(this){flags -> ValueResult(handler(flags))}
-infix fun <T, F> Parser<T, F>.fixedResultValue(value: T)
+infix fun <T, F> Parser<*, F>.fixedResultValue(value: T)
         = FixedParser(this){ValueResult(value)}
-infix fun <T, F> Parser<T, F>.fixedResultChar(handler: (F)->Char)
+infix fun <T, F> Parser<*, F>.fixedResultChar(handler: (F)->Char)
         = FixedParser(this){flags -> CharResult<T>(handler(flags))}
-infix fun <T, F> Parser<T, F>.fixedResultString(handler: (F)->String)
+infix fun <T, F> Parser<*, F>.fixedResultString(handler: (F)->String)
         = FixedParser(this){flags -> StringResult<T>(handler(flags))}
 
 infix fun <T, Fi, Fo> Parser<T, Fi>.transFlags(handler: (Fo)->Fi)
